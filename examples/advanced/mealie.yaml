@@ -1,0 +1,180 @@
+---
+repositories:
+  - name: sysbee
+    url: https://charts.sysbee.io/stable/sysbee
+
+releases:
+  - name: mealie
+    namespace: apps
+    chart: sysbee/kubedeploy
+    disableValidationOnInstall: true
+    version: 1.1.0
+    installed: true
+
+    values:
+      - deploymentMode: Statefulset
+      - fullnameOverride: mealie
+      - image:
+          repository: hkotel/mealie
+          tag: frontend-nightly
+          pullPolicy: Always
+
+      - ports:
+          - name: http
+            containerPort: 3000
+            protocol: TCP
+
+      - service:
+          enabled: true
+          ports:
+            - port: 3000
+              targetPort: http
+              protocol: TCP
+              name: http
+
+      - ingress:
+          enabled: true
+          hosts:
+            - host: {{ requiredEnv "MEALIE_DOMAIN" }}
+
+      - extraSecrets:
+        - name: config
+          data:
+            BASE_URL: https://{{ requiredEnv "MEALIE_DOMAIN" }}
+            ALLOW_SIGNUP: "false"
+            DB_ENGINE: sqlite
+            WEB_GUNICORN: "false"
+            WORKERS_PER_CORE: "0.5"
+            MAX_WORKERS: "1"
+            WEB_CONCURRENCY: "1"
+
+      - envFrom:
+          - secretRef:
+              name: mealie-config
+
+      - env:
+        - name: API_URL
+          value: http://localhost:9000
+
+      - resources:
+          limits:
+            memory: 512Mi
+
+      - networkPolicy:
+          enabled: true
+
+      - additionalContainers:
+          enabled: true
+          containers:
+            - name: mealie-api
+              repository: hkotel/mealie
+              tag: "api-nightly"
+              ports:
+                - name: api
+                  containerPort: 9000
+                  protocol: TCP
+              resources:
+                limits:
+                  memory: 1Gi
+              healthcheck:
+                enabled: false
+                probes:
+                  livenessProbe:
+                    httpGet:
+                      path: /api/app/about
+                      port: 9000
+                    initialDelaySeconds: 3
+                    periodSeconds: 3
+                    failureThreshold: 4
+                  readinessProbe:
+                    httpGet:
+                      path: /api/app/about
+                      port: 9000
+                    initialDelaySeconds: 3
+                    periodSeconds: 3
+                    failureThreshold: 4
+                  startupProbe:
+                    httpGet:
+                      path: /api/app/about
+                      port: 9000
+                    initialDelaySeconds: 3
+                    periodSeconds: 3
+
+      - persistency:
+          enabled: true
+          capacity:
+            storage: 20Gi
+          mountPath: "/app/data"
+
+
+
+  # STAGE 2
+
+
+  - name: mealie-backup
+    namespace: apps
+    chart: sysbee/kubedeploy
+    needs:
+      - apps/mealie
+    labels:
+      backup: "true"
+    installed: false
+    version: 1.1.0
+    values:
+      - deploymentMode: Cronjob
+      - nameOverride: kopia
+      - cronjobspec:
+          schedule: "*/5 * * * *"
+          failedJobsHistoryLimit: 3
+          concurrencyPolicy: Replace
+          command:
+            - ls
+            - -lha
+            - /data
+
+      - initContainers:
+          enabled: true
+          containers:
+            #- name: kopia-repository-connect
+            #  repository: kopia/kopia
+            #  tag: latest
+            #  command:
+            #    - kopia
+            #    - repository
+            #    - connect
+            #    - server
+            #    - --url
+            #    - https://kopia-server.kube-system:51515
+            #    - --override-username=mealie
+            #    - --override-hostname=b11
+            - name: mealie-backup
+              repository: python
+              tag: "latest"
+              command:
+                - /bin/bash
+                - -c
+                - "pip install requests && python3 /scripts/mealie_backup.py"
+      - env:
+        - name: MEALIE_TOKEN
+          value: {{ requiredEnv "MEALIE_TOKEN" }}
+        - name: MEALIE_API_URL
+          value: http://mealie:3000/api/
+        - name: MEALIE_DATADIR
+          value: /data/
+      - image:
+          repository: busybox
+          tag: latest
+          pullPolicy: Always
+      - service:
+          enabled: false
+      - configMaps:
+          - name: backupscript
+            mount: true
+            mountPath: /scripts
+            data:
+              mealie_backup.py: |
+                {{ readFile "files/mealie_backup.py" | nindent 16 }}
+      - extraVolumeMounts:
+          - name: kopia-data
+            mountPath: /data
+

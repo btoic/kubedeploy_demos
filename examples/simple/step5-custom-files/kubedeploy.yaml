@@ -1,0 +1,45 @@
+---
+image:
+  repository: nginx
+  tag: "1.25"
+ports:
+  - containerPort: 8080 # Changed as per env var and template file
+# optional
+ingress:
+  enabled: true
+  hosts:
+    - host: localhost
+replicaCount: 2
+podAntiAffinity: "soft" # optional
+podDisruptionBudget:
+  enabled: true # ensure that there is always once container up and running
+minReadySeconds: 30 # wait for 30s before continuing rolling update
+nameOverride: nginx
+
+# NEW Content
+
+configMaps:
+  - name: nginx-conf
+    mount: true
+    mountPath: /etc/nginx/templates
+    data:
+      default.conf.template: |
+        server {
+        listen      ${NGINX_PORT};
+        server_name  localhost;
+
+        location / {
+            root   /usr/share/nginx/html;
+            index  index.html index.htm;
+        }
+
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   /usr/share/nginx/html;
+        }
+
+        }
+configMapsHash: true # optional
+env:
+  - name: NGINX_PORT
+    value: "8080"

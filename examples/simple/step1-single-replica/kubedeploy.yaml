@@ -1,0 +1,10 @@
+---
+image:
+  repository: nginx
+ports:
+  - containerPort: 80
+# optional
+ingress:
+  enabled: true
+  hosts:
+    - host: localhost

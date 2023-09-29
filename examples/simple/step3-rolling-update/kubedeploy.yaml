@@ -1,0 +1,19 @@
+---
+image:
+  repository: nginx
+  tag: "1.25"
+ports:
+  - containerPort: 80
+# optional
+ingress:
+  enabled: true
+  hosts:
+    - host: localhost
+replicaCount: 2
+podAntiAffinity: "soft" # optional
+
+# New content
+
+podDisruptionBudget:
+  enabled: true # ensure that there is always once container up and running
+minReadySeconds: 30 # wait for 30s before continuing rolling update

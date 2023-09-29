@@ -1,0 +1,92 @@
+---
+repositories:
+  - name: haproxytech
+    url: https://haproxytech.github.io/helm-charts
+  - name: jetstack
+    url: https://charts.jetstack.io
+
+releases:
+  - name: haproxy
+    namespace: ingress
+    chart: haproxytech/kubernetes-ingress
+    # this disables the CRD validation during first install
+    disableValidationOnInstall: true
+    version: 1.29.3
+    installed: true
+    values:
+      - controller:
+          kind: DaemonSet
+          replicaCount: 1
+          minReadySeconds: 30
+          unprivileged: false
+          # terminationGracePeriodSeconds is >= sleep time + haproxy SIGUSR1 termination time
+          terminationGracePeriodSeconds: 60
+          ingressClassResource:
+            name: haproxy
+            default: true
+          ingressClass: haproxy
+          extraArgs:
+            - --disable-ipv6
+            - --cache-resync-period=0s
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          autoscaling:
+            enabled: false
+          config:
+            timeout-connect: "10s"
+            timeout-client: "300s"
+            timeout-server: "300s"
+            timeout-queue: "300s"
+            timeout-http-request: "20s"
+            scale-server-slots: "10"
+            load-balance: "roundrobin"
+            dontlognull: "true"
+            log-format: "%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %ID %hr %hs %{+Q}r"
+            forwarded-for: "true"
+            frontend-config-snippet: |-
+              unique-id-format %{+X}o\ %ci_%cp%fi%fp%Ts%rt
+              unique-id-header X-Req-ID
+              http-response set-header X-Req-ID %ID
+          logging:
+            level: debug
+            traffic:
+              address: "stdout"
+              format: "raw"
+              facility: "daemon"
+          nodeSelector:
+            ingress-ready: "true"
+          tolerations:
+            - operator: Exists
+          containerPort:
+            http: 80
+            https: 443
+          daemonset:
+            useHostNetwork: true
+            useHostPort: true
+      - defaultBackend:
+          enabled: false
+
+  - name: cert-manager
+    namespace: ingress
+    chart: jetstack/cert-manager
+    # this disables the CRD validation during first install
+    disableValidationOnInstall: true
+    version: v1.12.3
+    installed: true
+    values:
+      - installCRDs: true
+
+  - name: cert-manager-issuers
+    namespace: ingress
+    chart: ./issuers
+    version: 0.1.0
+    disableValidationOnInstall: true
+    installed: true
+    needs:
+      - cert-manager
+

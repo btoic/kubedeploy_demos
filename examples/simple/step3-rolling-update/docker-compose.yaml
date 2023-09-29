@@ -1,0 +1,9 @@
+---
+version: '3.3'
+services:
+  nginx:
+    image: nginx:1.25
+    deploy:
+      replicas: 2
+    ports:
+      - 8000-8001:80
