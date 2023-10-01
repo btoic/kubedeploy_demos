@@ -19,6 +19,14 @@ nameOverride: nginx
 # NEW Content
 
 configMaps:
+  - name: nginx-root
+    mount: true
+    mountPath: /usr/share/nginx/html
+    data:
+      index.html: |
+        </br>
+        <center><h1>Hello DHH</h1></center>
+
   - name: nginx-conf
     mount: true
     mountPath: /etc/nginx/templates

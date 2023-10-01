@@ -12,7 +12,14 @@ Start your local Kind cluster
 cd kind/
 kind create cluster --config kind-cluster.yaml
 ```
-Command will create a 3 node cluster, one control-plane node with taints, and two worker nodes simulating two availability zones.
+
+Command will create a 3 node cluster, one control-plane node with taints, and three worker nodes simulating three availability zones.
+
+registry proxy for offiline demos
+
+```bash
+docker run -d --name proxy --restart=always --net=kind -e REGISTRY_PROXY_REMOTEURL=https://registry-1.docker.io registry:2
+```
 
 After that apply the ingress and cert-manager
 

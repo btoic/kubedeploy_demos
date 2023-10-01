@@ -1,0 +1,43 @@
+---
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: kubedeploy-demo
+containerdConfigPatches:
+  - |-
+    [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+      endpoint = ["http://proxy:5000"]
+    [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5000"]
+      endpoint = ["http://registry:5000"]
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.27.3@sha256:9dd3392d79af1b084671b05bcf65b21de476256ad1dcc853d9f3b10b4ac52dde
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 80
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 443
+        protocol: TCP
+
+  - role: worker
+    image: kindest/node:v1.27.3@sha256:9dd3392d79af1b084671b05bcf65b21de476256ad1dcc853d9f3b10b4ac52dde
+    labels:
+      topology.kubernetes.io/zone: "eu-central-1a"
+
+  - role: worker
+    image: kindest/node:v1.27.3@sha256:9dd3392d79af1b084671b05bcf65b21de476256ad1dcc853d9f3b10b4ac52dde
+    labels:
+      topology.kubernetes.io/zone: "eu-central-1b"
+
+  - role: worker
+    image: kindest/node:v1.27.3@sha256:9dd3392d79af1b084671b05bcf65b21de476256ad1dcc853d9f3b10b4ac52dde
+    labels:
+      topology.kubernetes.io/zone: "eu-central-1c"
+
