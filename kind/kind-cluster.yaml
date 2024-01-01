@@ -22,7 +22,16 @@ nodes:
 
   - role: worker
     image: kindest/node:v1.27.3@sha256:9dd3392d79af1b084671b05bcf65b21de476256ad1dcc853d9f3b10b4ac52dde
+    labels:
+      topology.kubernetes.io/zone: "eu-central-1a"
 
   - role: worker
     image: kindest/node:v1.27.3@sha256:9dd3392d79af1b084671b05bcf65b21de476256ad1dcc853d9f3b10b4ac52dde
+    labels:
+      topology.kubernetes.io/zone: "eu-central-1b"
+
+  - role: worker
+    image: kindest/node:v1.27.3@sha256:9dd3392d79af1b084671b05bcf65b21de476256ad1dcc853d9f3b10b4ac52dde
+    labels:
+      topology.kubernetes.io/zone: "eu-central-1c"
 

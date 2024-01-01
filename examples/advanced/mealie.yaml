@@ -1,7 +1,7 @@
 ---
 repositories:
   - name: sysbee
-    url: https://charts.sysbee.io/stable/sysbee
+    url: https://charts.sysbee.io/release/sysbee
 
 releases:
   - name: mealie
@@ -93,12 +93,6 @@ releases:
                     initialDelaySeconds: 3
                     periodSeconds: 3
                     failureThreshold: 4
-                  startupProbe:
-                    httpGet:
-                      path: /api/app/about
-                      port: 9000
-                    initialDelaySeconds: 3
-                    periodSeconds: 3
 
       - persistency:
           enabled: true
@@ -118,7 +112,7 @@ releases:
       - apps/mealie
     labels:
       backup: "true"
-    installed: false
+    installed: true
     version: 1.1.0
     values:
       - deploymentMode: Cronjob
@@ -156,7 +150,7 @@ releases:
                 - "pip install requests && python3 /scripts/mealie_backup.py"
       - env:
         - name: MEALIE_TOKEN
-          value: {{ requiredEnv "MEALIE_TOKEN" }}
+          value: {{ requiredEnv "MEALIE_TOKEN" | quote}}
         - name: MEALIE_API_URL
           value: http://mealie:3000/api/
         - name: MEALIE_DATADIR
